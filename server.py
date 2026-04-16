@@ -1,7 +1,9 @@
 import os
 import requests
 import base64  # 모듈 임포트
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
+from fastmcp.dependencies import CurrentHeaders
+from starlette.exceptions import HTTPException # FastMCP가 내부적으로 starlette/fastapi 구조를 일부 차용하므로 에러 처리에 쓰입니다.
 from dotenv import load_dotenv
 
 # 1. .env 파일 로드 (로컬 개발 환경용)
@@ -11,15 +13,34 @@ load_dotenv()
 # 2. 환경변수 읽기 (기본값 설정)
 # 로컬 .env 또는 Azure 환경변수에서 'FORGE_API_URL'을 가져오고, 없으면 localhost를 기본값으로 사용합니다.
 FORGE_API_URL = os.getenv("FORGE_API_URL", "http://localhost:7860/sdapi/v1/txt2img")
+MCP_API_KEY = os.getenv("MCP_API_KEY")
 
 # MCP 서버 초기화
 mcp = FastMCP("Flux-Forge-Connector")
 
+# 인증용 헬퍼 함수
+def verify_auth(headers: dict):  
+    if MCP_API_KEY:
+        # Copilot Studio에서 보낼 헤더 이름 (x-api-key)
+        auth_key = headers.get("x-api-key")
+        if auth_key != MCP_API_KEY:
+            raise HTTPException(status_code=403, detail="Unauthorized: Invalid API Key")
+    else:
+        return
+    
+    # 환경 변수가 없거나, 특정 개발 모드일 때는 인증 스킵
+    # if not MCP_API_KEY or os.getenv("MCP_DEV_MODE") == "true":
+    #     return
+
 @mcp.tool()
-def generate_image(prompt: str) -> str:
+def generate_image(prompt: str, context: Context) -> str:
     """
     Azure VM의 Flux 모델을 사용하여 이미지를 생성합니다.
     """
+    # 1. 요청 헤더를 가져와서 인증 확인
+    headers = context.request.headers
+    verify_auth(headers)
+
     payload = {
         "prompt": prompt,
         "steps": 20,

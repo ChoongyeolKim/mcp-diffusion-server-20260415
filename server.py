@@ -1,5 +1,6 @@
 import os
 import requests
+import base64  # 모듈 임포트
 from fastmcp import FastMCP
 from dotenv import load_dotenv
 
@@ -41,8 +42,21 @@ def generate_image(prompt: str) -> str:
         response = requests.post(url, json=payload, timeout=180)
         response.raise_for_status()
         
-        return "이미지 생성이 완료되었습니다."
+        result = response.json()
+        # Forge는 images 리스트에 base64 문자열을 담아 보냅니다.
+        image_b64 = result['images'][0]
         
+        # 1. 로컬 저장 - 이미지 데이터 반환 직전에 추가 (디버깅용)
+        with open("test_output.png", "wb") as f:
+            f.write(base64.b64decode(image_b64))
+        print("로컬에 test_output.png 저장 완료!")
+        
+        # 2. 클라이언트(Copilot/Inspector)에게 전달할 데이터 포맷
+        # 반드시 '문자열' 하나만 깔끔하게 리턴하도록 합니다.
+        # Copilot Studio가 이미지를 해석할 수 있도록 데이터 형식을 갖춰 반환합니다.
+        # Markdown 형식을 사용하여 챗봇 창에서 바로 이미지를 보여주려 시도합니다.
+        return f"data:image/png;base64,{image_b64}"
+    
     except Exception as e:
         return f"연결 실패 ({url}): {str(e)}"
 

@@ -47,10 +47,10 @@ def generate_image(prompt: str) -> str:
         image_b64 = result['images'][0]
         
         # 1. 로컬 저장 - 이미지 데이터 반환 직전에 추가 (디버깅용)
-        with open("test_output.png", "wb") as f:
-            f.write(base64.b64decode(image_b64))
-        print("로컬에 test_output.png 저장 완료!")
-        
+        # with open("test_output.png", "wb") as f:
+        #     f.write(base64.b64decode(image_b64))
+        # print("로컬에 test_output.png 저장 완료!")
+
         # 2. 클라이언트(Copilot/Inspector)에게 전달할 데이터 포맷
         # 반드시 '문자열' 하나만 깔끔하게 리턴하도록 합니다.
         # Copilot Studio가 이미지를 해석할 수 있도록 데이터 형식을 갖춰 반환합니다.
@@ -61,4 +61,12 @@ def generate_image(prompt: str) -> str:
         return f"연결 실패 ({url}): {str(e)}"
 
 if __name__ == "__main__":
-    mcp.run()
+    # 환경 변수에 'SSE'라는 설정이 있으면 SSE 모드로, 아니면 기본(stdio) 모드로 실행
+    transport_mode = os.getenv("MCP_TRANSPORT", "stdio")
+    
+    if transport_mode == "sse":
+        # host="0.0.0.0"은 외부(Azure VM 밖) 접속을 허용하기 위해 필수입니다.
+        mcp.run(transport="sse", host="0.0.0.0", port=8000)
+    else:
+        # 포트 사용을 하지 않음
+        mcp.run()

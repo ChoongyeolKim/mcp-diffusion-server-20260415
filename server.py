@@ -4,6 +4,7 @@ import base64  # 모듈 임포트
 from fastmcp import FastMCP, Context
 from fastmcp.dependencies import CurrentHeaders
 from starlette.exceptions import HTTPException # FastMCP가 내부적으로 starlette/fastapi 구조를 일부 차용하므로 에러 처리에 쓰입니다.
+from starlette.middleware.cors import CORSMiddleware # FastMCP는 starlette 기반입니다.
 from dotenv import load_dotenv
 
 # 1. .env 파일 로드 (로컬 개발 환경용)
@@ -17,6 +18,15 @@ MCP_API_KEY = os.getenv("MCP_API_KEY")
 
 # MCP 서버 초기화
 mcp = FastMCP("Flux-Forge-Connector")
+
+# FastMCP의 내부 앱에 CORS 미들웨어 주입
+mcp.app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 모든 도메인 허용 (테스트용)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 인증용 헬퍼 함수
 def verify_auth(headers: dict):  
